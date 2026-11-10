@@ -1,0 +1,26 @@
+# Python & Virtual Environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment variables & secrets (CRITICAL: Never commit .env files)
+.env
+.env.*
+!.env.example
+
+# Logs & OS artifacts
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
