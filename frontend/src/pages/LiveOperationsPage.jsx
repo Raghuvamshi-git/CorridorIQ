@@ -7,6 +7,7 @@ import { api } from '../services/api';
 export default function LiveOperationsPage() {
   const [positions, setPositions] = useState([]);
   const [routes, setRoutes] = useState([]);
+  const [stops, setStops] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -14,12 +15,22 @@ export default function LiveOperationsPage() {
   const fetchLiveTelemetry = async (routeId = '') => {
     try {
       setRefreshing(true);
-      const [posData, routeData] = await Promise.all([
+      const promises = [
         api.getVehiclePositions(routeId),
         routes.length === 0 ? api.getRoutes() : Promise.resolve(routes)
-      ]);
-      setPositions(posData);
-      if (routes.length === 0) setRoutes(routeData);
+      ];
+      if (routeId) {
+        promises.push(api.getRouteDetail(routeId));
+      }
+
+      const results = await Promise.all(promises);
+      setPositions(results[0]);
+      if (routes.length === 0) setRoutes(results[1]);
+      if (routeId && results[2]?.stops) {
+        setStops(results[2].stops);
+      } else if (!routeId) {
+        setStops([]);
+      }
     } catch (err) {
       console.error('Failed to load telemetry:', err);
     } finally {
@@ -95,7 +106,7 @@ export default function LiveOperationsPage() {
             Showing {positions.length} simulated vehicles reporting active GPS
           </span>
         </div>
-        <HyderabadTransitMap positions={positions} selectedRoute={selectedRoute} height="480px" />
+        <HyderabadTransitMap positions={positions} stops={stops} selectedRoute={selectedRoute} height="520px" />
       </div>
 
       {/* Live Fleet Position Records Table */}

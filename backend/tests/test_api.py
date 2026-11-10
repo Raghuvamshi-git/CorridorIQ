@@ -12,10 +12,10 @@ from backend.app.api.routes.dashboard import get_dashboard_summary, get_dashboar
 from backend.app.api.routes.routes import get_routes, get_route_detail, get_route_headways
 from backend.app.api.routes.vehicles import get_vehicles, get_vehicle_positions
 from backend.app.api.routes.analytics import get_delay_analytics, get_headway_anomalies, get_passenger_demand
-from backend.app.api.routes.dispatch import get_recommendations, update_recommendation_status
+from backend.app.api.routes.dispatch import get_recommendations, update_recommendation_status, generate_recommendations
 from backend.app.api.routes.agent import chat_with_agent
 from backend.app.schemas.transit_schema import AgentChatRequest, DispatchStatusUpdate
-from backend.app.models.transit import Route
+from backend.app.models.transit import Route, Stop, Vehicle, Trip, StopTime, VehiclePosition
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
@@ -139,3 +139,63 @@ def test_agent_chat_bunching_query(db):
     assert len(data["tools_executed"]) > 0
     assert data["tools_executed"][0]["tool_name"] == "detect_headway_anomalies"
     assert "bunching" in data["reply"].lower() or "ameerpet" in data["reply"].lower()
+
+
+def test_database_record_scale_compliance(db):
+    """Verifies that synthetic data meets enterprise scale specifications."""
+    route_count = db.query(Route).count()
+    stop_count = db.query(Stop).count()
+    vehicle_count = db.query(Vehicle).count()
+    trip_count = db.query(Trip).count()
+    stop_times_count = db.query(StopTime).count()
+    pos_count = db.query(VehiclePosition).count()
+
+    assert route_count == 12, f"Expected 12 routes, got {route_count}"
+    assert 60 <= stop_count <= 100, f"Expected 60-100 stops, got {stop_count}"
+    assert 40 <= vehicle_count <= 60, f"Expected 40-60 vehicles, got {vehicle_count}"
+    assert 150 <= trip_count <= 250, f"Expected 150-250 trips, got {trip_count}"
+    assert stop_times_count >= 1000, f"Expected >= 1000 stop_times, got {stop_times_count}"
+    assert pos_count >= 3000, f"Expected >= 3000 vehicle_positions, got {pos_count}"
+
+
+def test_pagination_endpoints(db):
+    """Verifies skip and limit query parameters across multiple endpoints."""
+    # Test vehicles pagination
+    page1 = get_vehicles(skip=0, limit=10, db=db)
+    assert len(page1) == 10
+    page2 = get_vehicles(skip=10, limit=10, db=db)
+    assert len(page2) == 10
+    assert page1[0]["vehicle_id"] != page2[0]["vehicle_id"]
+
+    # Test vehicle positions pagination
+    pos_page = get_vehicle_positions(skip=0, limit=25, db=db)
+    assert len(pos_page) == 25
+
+    # Test dispatch recommendations pagination
+    rec_page = get_recommendations(skip=0, limit=2, db=db)
+    assert len(rec_page) <= 2
+
+
+def test_headway_anomalies_schema_fields(db):
+    """Verifies that headway anomalies return comprehensive operational metadata."""
+    data = get_headway_anomalies(db=db)
+    assert len(data) > 0
+    for anomaly in data:
+        # Check dictionary keys or attributes
+        item = anomaly if isinstance(anomaly, dict) else anomaly.__dict__
+        assert "route_id" in item
+        assert "anomaly_type" in item
+        assert "severity" in item
+        assert "stop_name" in item
+        assert "actual_metric" in item
+        assert "expected_metric" in item
+        assert "detected_at" in item
+
+
+def test_dispatch_recommendation_generation(db):
+    """Verifies automated scanning and creation of dispatch recommendations."""
+    generated = generate_recommendations(db=db)
+    assert isinstance(generated, list)
+    # The scan should produce valid recommendation items
+    all_recs = get_recommendations(db=db)
+    assert len(all_recs) >= 4

@@ -10,10 +10,20 @@ router = APIRouter(prefix="/dispatch", tags=["Dispatch Recommendations"])
 @router.get("/recommendations", response_model=List[DispatchEventOut])
 def get_recommendations(
     status: Optional[str] = Query(None, description="PENDING_REVIEW, APPROVED, REJECTED, RESOLVED"),
+    skip: int = Query(0, ge=0, description="Records to skip for pagination"),
+    limit: int = Query(50, ge=1, le=200, description="Max records to return"),
     db: Session = Depends(get_db)
 ):
     """Returns AI and rule-generated dispatch recommendations for human controller review."""
-    return AnalyticsService.get_dispatch_recommendations(db, status=status)
+    recs = AnalyticsService.get_dispatch_recommendations(db, status=status)
+    s = skip if isinstance(skip, int) else getattr(skip, "default", 0)
+    l = limit if isinstance(limit, int) else getattr(limit, "default", 50)
+    return recs[s: s + l]
+
+@router.post("/generate", response_model=List[DispatchEventOut])
+def generate_recommendations(db: Session = Depends(get_db)):
+    """Triggers analytical scan across current telemetry and generates fresh dispatch interventions."""
+    return AnalyticsService.generate_operational_recommendations(db)
 
 @router.post("/recommendations/{recommendation_id}/status", response_model=DispatchEventOut)
 def update_recommendation_status(
@@ -37,4 +47,3 @@ def update_recommendation_status(
         )
 
     return updated
-

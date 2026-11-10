@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: corridoriq-transit
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: OPERATING_REGION
+        value: "Hyderabad, Telangana, India"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY
+        sync: false

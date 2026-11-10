@@ -73,6 +73,12 @@ corridor-iq/
 │   │   ├── schemas/
 │   │   │   ├── __init__.py
 │   │   │   └── transit_schema.py       # Pydantic v2 validation contracts
+│   │   ├── repositories/
+│   │   │   ├── __init__.py
+│   │   │   ├── route_repository.py     # Corridor data access abstraction
+│   │   │   ├── vehicle_repository.py   # Fleet inventory & telemetry access
+│   │   │   ├── trip_repository.py      # Timetable & stop arrival access
+│   │   │   └── dispatch_repository.py  # Dispatch review audit persistence
 │   │   ├── api/routes/
 │   │   │   ├── health.py               # System & engine status
 │   │   │   ├── dashboard.py            # Overview KPIs & Recharts trends
@@ -91,7 +97,7 @@ corridor-iq/
 │   ├── scripts/
 │   │   └── seed_database.py            # Standalone database seeder
 │   ├── tests/
-│   │   └── test_api.py                 # Automated test suite (11 test cases)
+│   │   └── test_api.py                 # Automated test suite (15 test cases)
 │   ├── requirements.txt
 │   └── .env.example
 │
@@ -125,6 +131,7 @@ corridor-iq/
 ├── docs/
 │   ├── architecture.md                 # System architecture specification
 │   ├── database-schema.md              # ERD & GTFS operational extensions
+│   ├── analytics-engine.md             # Transit formulas, thresholds & anomalies
 │   ├── api-documentation.md            # REST API reference
 │   └── ai-agent-workflow.md            # Gemini tool calling architecture
 ├── .gitignore
@@ -207,26 +214,30 @@ The autonomous operations agent uses **Google Gemini 2.5 Flash** with native fun
 
 ## 🧪 7. Automated Testing
 
-Run the automated test suite verifying all 11 backend test cases:
+Run the automated test suite verifying all 15 backend test cases:
 ```powershell
 .\backend\.venv\Scripts\pytest -p no:asyncio -v backend\tests\test_api.py
 ```
 
 ### Verified Test Results:
 ```text
-backend/tests/test_api.py::test_health_endpoint PASSED                   [  9%]
-backend/tests/test_api.py::test_dashboard_summary PASSED                 [ 18%]
-backend/tests/test_api.py::test_dashboard_trends PASSED                  [ 27%]
-backend/tests/test_api.py::test_get_routes PASSED                        [ 36%]
-backend/tests/test_api.py::test_get_route_detail PASSED                  [ 45%]
-backend/tests/test_api.py::test_get_vehicles PASSED                      [ 54%]
-backend/tests/test_api.py::test_get_vehicle_positions PASSED             [ 63%]
-backend/tests/test_api.py::test_analytics_headways_and_bunching PASSED   [ 72%]
-backend/tests/test_api.py::test_analytics_passenger_demand PASSED        [ 81%]
-backend/tests/test_api.py::test_dispatch_recommendations_and_update PASSED [ 90%]
-backend/tests/test_api.py::test_agent_chat_bunching_query PASSED         [100%]
+backend/tests/test_api.py::test_health_endpoint PASSED                   [  6%]
+backend/tests/test_api.py::test_dashboard_summary PASSED                 [ 13%]
+backend/tests/test_api.py::test_dashboard_trends PASSED                  [ 20%]
+backend/tests/test_api.py::test_get_routes PASSED                        [ 26%]
+backend/tests/test_api.py::test_get_route_detail PASSED                  [ 33%]
+backend/tests/test_api.py::test_get_vehicles PASSED                      [ 40%]
+backend/tests/test_api.py::test_get_vehicle_positions PASSED             [ 46%]
+backend/tests/test_api.py::test_analytics_headways_and_bunching PASSED   [ 53%]
+backend/tests/test_api.py::test_analytics_passenger_demand PASSED        [ 60%]
+backend/tests/test_api.py::test_dispatch_recommendations_and_update PASSED [ 66%]
+backend/tests/test_api.py::test_agent_chat_bunching_query PASSED         [ 73%]
+backend/tests/test_api.py::test_database_record_scale_compliance PASSED  [ 80%]
+backend/tests/test_api.py::test_pagination_endpoints PASSED              [ 86%]
+backend/tests/test_api.py::test_headway_anomalies_schema_fields PASSED   [ 93%]
+backend/tests/test_api.py::test_dispatch_recommendation_generation PASSED [100%]
 
-======================= 11 passed in 1.77s ========================
+======================= 15 passed in 10.31s ========================
 ```
 
 Frontend production build check:
@@ -243,3 +254,11 @@ npm run build
 * **SQL Injection Prevention**: Parameterized queries enforced via SQLAlchemy 2.0 ORM.
 * **Bounded Tool Execution**: Gemini has zero raw SQL execution privileges and can only invoke predefined read-only analytic methods and queued recommendation creation.
 * **Human-in-the-Loop**: All AI dispatch recommendations require manual authorization by the controller.
+
+---
+
+## 🌐 9. Public Deployment & Sharing
+CorridorIQ supports unified single-port full-stack container deployment:
+* **Docker Multi-Stage Build**: Compiles React frontend and packages with FastAPI.
+* **1-Click Render Deployment**: Configured via `render.yaml` and `Dockerfile`.
+* **Deployment Guide**: See [docs/deployment-guide.md](file:///c:/Users/raghu%20vamshi/Desktop/bus%20project/docs/deployment-guide.md) for step-by-step instructions for Render, Railway, Cloudflare Tunnels, and Wi-Fi sharing.

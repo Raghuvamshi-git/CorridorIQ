@@ -354,17 +354,20 @@ def seed_database_data(db: Session) -> dict:
     positions_count = 0
     updates_count = 0
 
-    vehicle_idx = 0
     for r_idx, r_data in enumerate(HYDERABAD_ROUTES_CATALOG):
         r_id = r_data["route_id"]
         stops_in_route = r_data["stops"]
         anomaly = r_data.get("anomaly")
+        num_stops = len(stops_in_route)
+
+        # 4 dedicated fleet buses assigned per corridor
+        route_vehicles = vehicles[r_idx * 4 : (r_idx + 1) * 4]
 
         # Generate 18 trips per route across operating day (06:00 to 22:00)
         for trip_num in range(1, 19):
             trip_id = f"TRIP-{r_data['short_name']}-{trip_num:03d}"
-            assigned_vehicle = vehicles[vehicle_idx % len(vehicles)]
-            vehicle_idx += 1
+            v_idx = (trip_num - 1) % len(route_vehicles)
+            assigned_vehicle = route_vehicles[v_idx]
 
             sched_dep = base_time + timedelta(minutes=(trip_num - 1) * r_data["headway"] * 5)
             sched_arr = sched_dep + timedelta(minutes=r_data["travel_time"])
@@ -406,7 +409,6 @@ def seed_database_data(db: Session) -> dict:
             trips_created.append(trip)
 
             # Generate StopTimes
-            num_stops = len(stops_in_route)
             time_per_stop = max(2, r_data["travel_time"] // max(1, num_stops - 1))
             current_stop_time = sched_dep
 
@@ -444,12 +446,34 @@ def seed_database_data(db: Session) -> dict:
 
             # Generate Vehicle Positions (telemetry)
             # Create a sequence of position logs simulating bus progression
-            for p_step in range(1, 10):
-                target_stop = stop_map[stops_in_route[min(len(stops_in_route) - 1, p_step % len(stops_in_route))]]
-                # Jitter slightly around stop coordinates
-                jitter_lat = target_stop["lat"] + random.uniform(-0.003, 0.003)
-                jitter_lon = target_stop["lon"] + random.uniform(-0.003, 0.003)
-                speed = 0.0 if p_step % 3 == 0 else random.uniform(18.0, 42.0)
+            base_stop_idx = int(v_idx * (num_stops / 4.0)) % num_stops
+            for p_step in range(1, 16):
+                # Historical vs active telemetry timestamp
+                if trip_num <= 14:
+                    pos_timestamp = sched_dep + timedelta(minutes=p_step * 2)
+                    stop_idx = min(num_stops - 1, (base_stop_idx + p_step) % num_stops)
+                    target_stop = stop_map[stops_in_route[stop_idx]]
+                    jitter_lat = target_stop["lat"] + random.uniform(-0.002, 0.002)
+                    jitter_lon = target_stop["lon"] + random.uniform(-0.002, 0.002)
+                else:
+                    # Active current run (trips 15-18): latest breadcrumbs leading up to now
+                    pos_timestamp = today - timedelta(minutes=(16 - p_step) * 2 + v_idx * 1)
+                    if p_step == 15 and r_id == "R-101" and v_idx in [0, 1]:
+                        # R-101 bunching pair at Ameerpet Metro Interchange (STP-07)
+                        ameerpet = stop_map["STP-07"]
+                        if v_idx == 0:
+                            jitter_lat = ameerpet["lat"] + 0.0006
+                            jitter_lon = ameerpet["lon"] + 0.0005
+                        else:
+                            jitter_lat = ameerpet["lat"] - 0.0005
+                            jitter_lon = ameerpet["lon"] - 0.0004
+                    else:
+                        stop_idx = min(num_stops - 1, (base_stop_idx + (p_step % max(1, num_stops // 2))) % num_stops)
+                        target_stop = stop_map[stops_in_route[stop_idx]]
+                        jitter_lat = target_stop["lat"] + random.uniform(-0.0015, 0.0015)
+                        jitter_lon = target_stop["lon"] + random.uniform(-0.0015, 0.0015)
+
+                speed = 0.0 if p_step % 5 == 0 else random.uniform(18.0, 42.0)
                 pass_count = random.randint(25, 68) if anomaly == "OVERCROWDING" else random.randint(15, 52)
                 load_factor = round(pass_count / assigned_vehicle.capacity, 2)
                 
@@ -471,7 +495,7 @@ def seed_database_data(db: Session) -> dict:
                     passenger_count=pass_count,
                     passenger_load_factor=load_factor,
                     occupancy_status=occ_status,
-                    timestamp=today - timedelta(minutes=(10 - p_step) * 4),
+                    timestamp=pos_timestamp,
                     is_simulated=True
                 )
                 db.add(vpos)

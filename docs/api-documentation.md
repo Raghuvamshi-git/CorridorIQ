@@ -44,10 +44,17 @@
 
 ### 4. Fleet & Telemetry
 * **`GET /api/vehicles`**
-  * Optional query params: `status` (`IN_SERVICE`, `MAINTENANCE`, `IDLE`), `propulsion` (`ELECTRIC`, `CNG`, `DIESEL`).
+  * Query parameters:
+    * `status` (optional): `IN_SERVICE`, `MAINTENANCE`, `IDLE`
+    * `propulsion` (optional): `ELECTRIC`, `CNG`, `DIESEL`
+    * `skip` (optional, default `0`): Pagination offset
+    * `limit` (optional, default `100`, max `500`): Max records
   * Returns fleet units with battery/fuel %, odometer, and current operational speed.
 * **`GET /api/vehicles/positions`**
-  * Optional query param: `route_id`.
+  * Query parameters:
+    * `route_id` (optional): Filter coordinates by corridor
+    * `skip` (optional, default `0`): Pagination offset
+    * `limit` (optional, default `100`, max `500`): Max records
   * Returns simulated GPS latitude/longitude, speeds, bearing, and occupancy status for Leaflet map rendering.
 
 ---
@@ -56,9 +63,13 @@
 * **`GET /api/analytics/delays`**
   * Aggregated delay distributions and top delayed corridors.
 * **`GET /api/analytics/headways`**
-  * Network-wide headway anomalies, identifying bus bunching events and service gaps.
+  * Query parameters: `route_id` (optional), `skip` (default `0`), `limit` (default `50`).
+  * Network-wide headway anomalies, identifying bus bunching events and service gaps with stop-level resolution, `actual_metric`, and `expected_metric`.
 * **`GET /api/analytics/passenger-demand`**
+  * Query parameters: `route_id` (optional).
   * 24-hour boarding profiles and morning/evening commuter peak volumes.
+* **`GET /api/analytics/route-comparison`**
+  * Multi-dimensional corridor rankings evaluating OTP, average delay, speed, and passenger load.
 
 ---
 
@@ -75,7 +86,7 @@
   * **Response**:
     ```json
     {
-      "reply": "Route 101 has confirmed bus bunching at Ameerpet Metro Hub between TS-09-UB-104 and TS-09-UB-103 (headway: 2.2 mins vs 10 mins target).",
+      "reply": "Route 101 has confirmed bus bunching at Ameerpet Metro Hub between TS09UB1001 and TS09UB1002 (headway: 3.2 mins vs 12.0 mins target).",
       "tools_executed": [
         {
           "tool_name": "detect_headway_anomalies",
@@ -91,13 +102,18 @@
 
 ### 7. Dispatch Recommendations
 * **`GET /api/dispatch/recommendations`**
-  * Optional query param: `status` (`PENDING_REVIEW`, `APPROVED`, `REJECTED`, `RESOLVED`).
+  * Query parameters: `status` (`PENDING_REVIEW`, `APPROVED`, `REJECTED`, `RESOLVED`), `skip` (default `0`), `limit` (default `50`).
+  * Returns operational interventions with evidence, confidence, and action items.
+* **`POST /api/dispatch/generate`**
+  * Triggers an automated scan across current telemetry and schedules to synthesize fresh dispatch recommendations for bunching, corridor delays, or battery depletion.
 * **`POST /api/dispatch/recommendations/{recommendation_id}/status`**
   * Updates the status of a recommendation.
   * **Request**:
     ```json
     {
       "status": "APPROVED"
+    }
+    ```
     }
     ```
 

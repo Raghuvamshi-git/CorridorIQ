@@ -25,10 +25,15 @@ def get_delay_analytics(db: Session = Depends(get_db)):
 @router.get("/headways", response_model=List[HeadwayAnomalyOut])
 def get_headway_anomalies(
     route_id: Optional[str] = Query(None, description="Optional route filter"),
+    skip: int = Query(0, ge=0, description="Records to skip for pagination"),
+    limit: int = Query(50, ge=1, le=200, description="Max records to return"),
     db: Session = Depends(get_db)
 ):
     """Detects bus bunching and irregular headway gaps across the network."""
-    return AnalyticsService.get_headway_anomalies(db, route_id=route_id)
+    anomalies = AnalyticsService.get_headway_anomalies(db, route_id=route_id)
+    s = skip if isinstance(skip, int) else getattr(skip, "default", 0)
+    l = limit if isinstance(limit, int) else getattr(limit, "default", 50)
+    return anomalies[s: s + l]
 
 @router.get("/passenger-demand", response_model=List[PassengerDemandOut])
 def get_passenger_demand(
@@ -43,4 +48,3 @@ def get_route_comparison(db: Session = Depends(get_db)):
     """Compares on-time performance, delay, and passenger load across all corridors."""
     trends = AnalyticsService.get_dashboard_trends(db)
     return trends["route_performance_comparison"]
-

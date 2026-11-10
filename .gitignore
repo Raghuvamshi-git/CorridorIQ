@@ -5,6 +5,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.sqlite3
+*.db
+corridoriq.db
 
 # Node & Frontend
 node_modules/

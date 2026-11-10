@@ -105,6 +105,8 @@ class VehiclePositionOut(BaseModel):
     passenger_load_factor: float
     occupancy_status: str
     status: str
+    propulsion_type: Optional[str] = "DIESEL"
+    fuel_or_battery_level: Optional[float] = 85.0
     timestamp: datetime
     is_simulated: bool = True
 
@@ -142,12 +144,19 @@ class HeadwayAnomalyOut(BaseModel):
     corridor_name: str
     trip_id: str
     vehicle_id: str
+    stop_id: Optional[str] = None
+    stop_name: Optional[str] = None
+    detected_at: Optional[datetime] = None
+    actual_metric: Optional[str] = None
+    expected_metric: Optional[str] = None
     scheduled_headway_mins: float
     actual_headway_mins: float
     deviation_mins: float
     anomaly_type: str # BUS_BUNCHING, LONG_HEADWAY
     severity: str     # HIGH, MEDIUM, LOW
     explanation: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PassengerDemandOut(BaseModel):
@@ -158,6 +167,8 @@ class PassengerDemandOut(BaseModel):
     peak_morning_volume: int
     peak_evening_volume: int
     overcrowding_alerts: List[Dict[str, Any]]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Dispatch Recommendations ---

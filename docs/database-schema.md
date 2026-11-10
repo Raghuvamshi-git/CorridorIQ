@@ -170,3 +170,47 @@ Unlike standard static GTFS feeds, CorridorIQ incorporates **Operational Telemat
 2. **Occupancy Status**: Passenger load factors exceeding 90% are automatically categorized as `STANDING_ROOM_ONLY` or `CRUSHED_STANDING_ROOM`.
 3. **Dispatch Audit Logs**: Every corrective suggestion by the AI controller is recorded in `dispatch_events` with confidence scores and human status transitions.
 
+---
+
+### 3. Scaled Synthetic Dataset Inventory (Hyderabad, Telangana)
+
+| Relational Table | Record Count | Description & Context |
+| :--- | :--- | :--- |
+| `agencies` | **1** | Hyderabad Metropolitan Transit Authority (`TSRTC-HYD-SIM`) |
+| `routes` | **12** | Core arterial corridors (Hitech City, Ameerpet, Secunderabad, Gachibowli, LB Nagar) |
+| `stops` | **63** | Geocoded transit stations with lat/long across Hyderabad metropolitan zone |
+| `vehicles` | **48** | Modern transit fleet: Switch EiV12 Electric, Tata Starbus CNG, Ashok Leyland Diesel |
+| `trips` | **216** | Directional scheduled and completed trips for peak and non-peak periods |
+| `stop_times` | **1,368** | Stop-level scheduled/actual arrival timestamps, boardings, and alightings |
+| `vehicle_positions` | **3,240** | High-frequency telemetry coordinate breadcrumbs with speed and occupancy |
+| `trip_updates` | **216** | Live schedule adherence updates, delay seconds, and headway deviation flags |
+| `passenger_counts` | **288** | 24-hour boarding and alighting distributions with platform wait time estimates |
+| `dispatch_events` | **4+** | Dispatch interventions with human approval states (`PENDING_REVIEW`, `APPROVED`, etc.) |
+| `service_alerts` | **2** | Active alerts (e.g. Ameerpet flyover construction & Cyber Towers traffic choke) |
+
+---
+
+### 4. Repository Abstraction Architecture
+
+To decouple raw database queries from API controllers and domain logic, CorridorIQ employs a clean SQLAlchemy 2.0 Repository pattern located in `backend/app/repositories/`:
+
+- **`RouteRepository`**:
+  - `get_all(active_only)`: Retrieves all registered corridors with agency joins.
+  - `get_by_id(route_id)`: Fetches corridor entity, configured stops, and headway targets.
+  - `count()`: Total corridor count.
+- **`VehicleRepository`**:
+  - `get_all(status, propulsion)`: Filtered vehicle asset retrieval.
+  - `get_by_id(vehicle_id)`: Diagnostic telemetry inspection.
+  - `get_latest_position(vehicle_id)`: Real-time breadcrumb coordinates.
+  - `get_positions(route_id, limit)`: Bounded telemetry streaming queries.
+- **`TripRepository`**:
+  - `get_trips(route_id, status)`: Schedules and status filtering.
+  - `get_stop_times_for_trip(trip_id)`: Stop-level arrival sequence.
+  - `get_trip_updates(route_id)`: Real-time delay calculations.
+- **`DispatchRepository`**:
+  - `get_all(status)`: Review queue filtering.
+  - `get_by_id(recommendation_id)`: Intervention details.
+  - `update_status(recommendation_id, status)`: Human-in-the-loop transition.
+  - `create(recommendation)`: Anomaly engine auto-generation.
+
+
