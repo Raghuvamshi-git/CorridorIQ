@@ -94,3 +94,4 @@ Anyone connected to the same Wi-Fi router (family, teammates, office colleagues)
 2. Share the URL with anyone on your local network:
    * **`http://192.168.1.13:5173`** (Vite frontend with proxy)
    * or **`http://192.168.1.13:8000`** (FastAPI unified app)
+

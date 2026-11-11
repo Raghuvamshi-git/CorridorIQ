@@ -14,3 +14,4 @@ services:
         value: gemini-2.5-flash
       - key: GEMINI_API_KEY
         sync: false
+
